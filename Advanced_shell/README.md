@@ -1,4 +1,3 @@
----
 
 # 📁 Advanced Shell Scripting Project
 
@@ -158,6 +157,4 @@ Submit for **Manual QA Review** when you finish all tasks.
 * Use `sleep` for rate-limiting
 * Test each script incrementally
 * Use `set -e` in scripts to catch errors early
-
----
 
