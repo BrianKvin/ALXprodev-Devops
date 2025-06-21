@@ -15,17 +15,40 @@ base_url="https://pokeapi.co/api/v2/pokemon"
 # Delay in seconds between requests to avoid rate limiting
 delay=2
 
+# Max number of retries per Pokémon
+max_retries=3
+
+# Log file for errors
+error_log="fetch_errors.log"
+
+# Clear previous error log
+> "$error_log"
+
 for pokemon in "${pokemon_list[@]}"; do
   echo "Fetching data for $pokemon..."
 
-  # Fetch data and save to file
-  curl -s "${base_url}/${pokemon}" -o "${output_dir}/${pokemon}.json"
+  attempt=1
+  success=0
 
-  # Check if curl succeeded and file is not empty
-  if [[ $? -eq 0 && -s "${output_dir}/${pokemon}.json" ]]; then
-    echo "Saved data to ${output_dir}/${pokemon}.json ✅"
-  else
-    echo "Failed to fetch data for $pokemon ❌"
+  while [ $attempt -le $max_retries ]; do
+    # Fetch data silently and save to file
+    curl -s -f "${base_url}/${pokemon}" -o "${output_dir}/${pokemon}.json"
+
+    # Check if curl succeeded and file is not empty
+    if [[ $? -eq 0 && -s "${output_dir}/${pokemon}.json" ]]; then
+      echo "Saved data to ${output_dir}/${pokemon}.json ✅"
+      success=1
+      break
+    else
+      echo "Attempt $attempt for $pokemon failed."
+      ((attempt++))
+      sleep 1
+    fi
+  done
+
+  if [ $success -eq 0 ]; then
+    echo "Failed to fetch data for $pokemon after $max_retries attempts. Logging error."
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Failed to fetch data for $pokemon after $max_retries attempts." >> "$error_log"
   fi
 
   # Sleep to avoid hitting rate limits
