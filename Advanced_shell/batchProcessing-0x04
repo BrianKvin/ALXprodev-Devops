@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# List of Pokémon to fetch
+pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+
+# Directory to save JSON files
+output_dir="pokemon_data"
+
+# Create output directory if it doesn't exist
+mkdir -p "$output_dir"
+
+# Base URL of the PokéAPI for Pokémon data
+base_url="https://pokeapi.co/api/v2/pokemon"
+
+# Max number of retries per Pokémon
+max_retries=3
+
+# Log file for errors
+error_log="fetch_errors_parallel.log"
+
+# Clear previous error log
+> "$error_log"
+
+# Function to fetch a single Pokémon with retries
+fetch_pokemon() {
+  local pokemon=$1
+  local attempt=1
+  local success=0
+
+  echo "Fetching data for $pokemon..."
+
+  while [ $attempt -le $max_retries ]; do
+    curl -s -f "${base_url}/${pokemon}" -o "${output_dir}/${pokemon}.json"
+    if [[ $? -eq 0 && -s "${output_dir}/${pokemon}.json" ]]; then
+      echo "Saved data to ${output_dir}/${pokemon}.json ✅"
+      success=1
+      break
+    else
+      echo "Attempt $attempt for $pokemon failed."
+      ((attempt++))
+      sleep 1
+    fi
+  done
+
+  if [ $success -eq 0 ]; then
+    echo "Failed to fetch data for $pokemon after $max_retries attempts. Logging error."
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Failed to fetch data for $pokemon after $max_retries attempts." >> "$error_log"
+  fi
+}
+
+# Export function and variables for use in subshells
+export -f fetch_pokemon
+export base_url
+export output_dir
+export max_retries
+export error_log
+
+# Run fetches in parallel (background)
+for pokemon in "${pokemon_list[@]}"; do
+  fetch_pokemon "$pokemon" &
+done
+
+# Wait for all background jobs to finish
+wait
+
+echo "All fetches completed."
