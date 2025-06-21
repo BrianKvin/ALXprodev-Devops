@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Usage: ./parse_pokemon pokemon.json
+
+if [ $# -ne 1 ]; then
+  echo "Usage: $0 <pokemon_json_file>"
+  exit 1
+fi
+
+file="$1"
+
+# Extract fields using jq
+# - name: capitalize first letter
+# - height: convert dm to meters (divide by 10)
+# - weight: convert hg to kg (divide by 10)
+# - type: get first type only, capitalize first letter
+
+name=$(jq -r '.name' "$file" | sed 's/.*/\u&/') 
+
+height_dm=$(jq -r '.height' "$file")
+height=$(awk "BEGIN {printf \"%.1f\", $height_dm/10}")
+
+weight_hg=$(jq -r '.weight' "$file")
+weight=$(awk "BEGIN {printf \"%d\", $weight_hg/10}")
+
+type=$(jq -r '.types[0].type.name' "$file" | sed 's/.*/\u&/')
+
+echo "$name is of type $type, weighs ${weight}kg, and is ${height}m tall."
